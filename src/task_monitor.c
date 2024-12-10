@@ -46,7 +46,7 @@ SYSTEM_TASK(TASK_MONITOR)
 	size_t length;
 	void *ptr;
 	float v;
-
+	data_item_t* received_item;
 	// Loop
 	TASK_LOOP()
 	{
@@ -56,16 +56,17 @@ SYSTEM_TASK(TASK_MONITOR)
 		ptr = xRingbufferReceive(*rbuf, &length, pdMS_TO_TICKS(1000));
 
 		//Si el timeout expira, este puntero es NULL
-		if (ptr != NULL) 
-		{
-			// Este código se puede usar para notificar cuántos bytes ha recibido del
-			// sensor a través de la estructura RingBuffer. 
-			//ESP_LOGI(TAG,"Recibidos: %d bytes", length);
-			v = *((float *) ptr);
-			ESP_LOGI(TAG, "T:%.5f", v);
+		if (ptr != NULL && length == sizeof(data_item_t)) {
+			received_item = (data_item_t *) ptr;
+			if (received_item->source == 0) {
+				// Origen TASK_SENSOR
+				ESP_LOGI(TAG, "Valor del sensor: %.4f", received_item->value);
+			} else if (received_item->source == 1) {
+				// Origen TASK_CHECK
+				ESP_LOGI(TAG, "Diferencia calculada: %.4f", received_item->value);
+			}
 			vRingbufferReturnItem(*rbuf, ptr);
-		} 
-		else 
+		}else 
 		{
 			ESP_LOGW(TAG, "Esperando datos ...");
 		}

@@ -155,6 +155,8 @@ void system_task_stop(system_t *sys, system_task_t *task, uint16_t timeout_ms);
 
 #define STATE_BEGIN()
 
+#define GET_ST_FROM_TASK() __task->system->sys_state
+
 #define STATE_END() break
 
 #define STATE_MACHINE_END() }}

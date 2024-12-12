@@ -44,7 +44,9 @@ void app_main(void)
 	ESP_LOGI(TAG,"Starting STF_P1 system");
 	system_create(&sys_stf_p1, SYS_NAME);
 	system_register_state(&sys_stf_p1, INIT);
-	system_register_state(&sys_stf_p1, SENSOR_LOOP);
+	system_register_state(&sys_stf_p1, NORMAL_MODE);
+	system_register_state(&sys_stf_p1, DEGRADED_MODE);
+	system_register_state(&sys_stf_p1, ERROR);
 	system_set_default_state(&sys_stf_p1, INIT);
 
 
@@ -90,7 +92,8 @@ void app_main(void)
 			// Lo que hace la tarea está en task_sensor.h
             ESP_LOGI(TAG, "starting sensor task...");
             task_sensor_args_t task_sensor_args = {&rbuf, &cbuf, 1, N};
-			system_task_start_in_core(&sys_stf_p1, &task_sensor, TASK_SENSOR, "TASK_SENSOR", TASK_SENSOR_STACK_SIZE, &task_sensor_args, 0, CORE0);
+			system_task_start_in_core(&sys_stf_p1, &task_sensor, TASK_SENSOR, "TASK_SENSOR", 
+										TASK_SENSOR_STACK_SIZE, &task_sensor_args, 0, CORE0);
 			ESP_LOGI(TAG, "Done");
 
 			// Delay
@@ -99,13 +102,15 @@ void app_main(void)
 			// Crea la tarea monitor como un proceso asociado al CORE 1.
 			// Lo que hace la tarea está en task_monitor.c
 			ESP_LOGI(TAG, "starting monitor task...");
-			task_monitor_args_t task_monitor_args = {&rbuf};
-			system_task_start_in_core(&sys_stf_p1, &task_monitor, TASK_MONITOR, "TASK_MONITOR", TASK_MONITOR_STACK_SIZE, &task_monitor_args, 0, CORE1);
+			task_monitor_args_t task_monitor_args = {&rbuf, &sys_stf_p1, &task_monitor};
+			system_task_start_in_core(&sys_stf_p1, &task_monitor, TASK_MONITOR, "TASK_MONITOR", 
+											TASK_MONITOR_STACK_SIZE, &task_monitor_args, 0, CORE1);
 			ESP_LOGI(TAG, "Done");
 
 			ESP_LOGI(TAG, "starting check task...");
 			task_check_args_t task_check_args = {&rbuf, &cbuf};
-			system_task_start_in_core(&sys_stf_p1, &task_check, TASK_CHECK, "TASK_CHECK", TASK_CHECK_STACK_SIZE, &task_check_args, 0, CORE1);
+			system_task_start_in_core(&sys_stf_p1, &task_check, TASK_CHECK, "TASK_CHECK",
+											TASK_CHECK_STACK_SIZE, &task_check_args, 0, CORE1);
 			ESP_LOGI(TAG, "Done");
 
 			// Esta macro provoca el cambio de estado a SENSOR_LOOP, en este caso. 
@@ -113,16 +118,35 @@ void app_main(void)
 			// (la tarea actual es main, la tarea principal de FREERTOS). Es decir,
 			// desde la tarea sensor o monitor podríamos cambiar el estado de la máquina si,
 			// por ejemplo, se detecta un fallo en el proceso. 
-			SWITCH_ST(&sys_stf_p1, SENSOR_LOOP);
+			SWITCH_ST(&sys_stf_p1, NORMAL_MODE);
 			STATE_END();
 		}
-		STATE(SENSOR_LOOP)
+		STATE(NORMAL_MODE)
 		{
 			STATE_BEGIN();
 			// La máquina queda en este estado de forma indefinida. 
-			ESP_LOGI(TAG, "State: SENSOR_LOOP");
+			ESP_LOGI(TAG, "State: NORMAL_MODE");
 			STATE_END();
 		}
+
+		STATE(DEGRADED_MODE)
+		{
+			STATE_BEGIN();
+			// La máquina queda en este estado de forma indefinida. 
+			ESP_LOGI(TAG, "State: DEGRADED_MODE");
+			STATE_END();
+		}
+
+		STATE(ERROR)
+		{
+			STATE_BEGIN();
+			// La máquina queda en este estado de forma indefinida. 
+			ESP_LOGI(TAG, "State: ERROR");
+			system_task_stop(&sys_stf_p1, &task_check, TASK_CHECK_TIMEOUT_MS);
+			system_task_stop(&sys_stf_p1, &task_sensor, TASK_SENSOR_TIMEOUT_MS);
+			STATE_END();
+		}
+
 		STATE_MACHINE_END();
 	}
 }

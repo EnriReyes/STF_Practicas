@@ -71,13 +71,21 @@ SYSTEM_TASK(TASK_CHECK)
 			item1 = ((data_item_t *) ptr);
 			item2 = (((data_item_t *) ptr+1));
 			diferencia.value = ((item1->value-item2->value)/item2->value)*100;
-			if (diferencia.value <0) diferencia.value *= -1;
-			
-
-			
-
 			vRingbufferReturnItem(*cbuf, ptr);
 
+			if (diferencia.value <0) diferencia.value *= -1;
+
+			if (diferencia.value >= 20.0 && GET_ST_FROM_TASK() != ERROR){
+				SWITCH_ST_FROM_TASK(ERROR);
+			}
+			else if(diferencia.value <= 10.0 && GET_ST_FROM_TASK() != NORMAL_MODE){
+				SWITCH_ST_FROM_TASK(NORMAL_MODE);
+			}
+			else if(10.0 > diferencia.value && diferencia.value < 20.0 && GET_ST_FROM_TASK() != DEGRADED_MODE){
+				SWITCH_ST_FROM_TASK(DEGRADED_MODE);
+			}
+
+			
             if (xRingbufferSendAcquire(*rbuf, &ptr2, sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
 			{
 					// Si falla la reserva de memoria, notifica la pérdida del dato. Esto ocurre cuando 

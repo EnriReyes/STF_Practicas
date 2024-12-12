@@ -180,14 +180,12 @@ SYSTEM_TASK(TASK_SENSOR)
 		{	
 			// lectura del sensor. Se obtiene el valor en grados centígrados
 			items[0].value = therm_read_t(termistor);
-			ESP_LOGI(TAG, "valor medido (pre buffer 1): %.4f", items[0].value);
 			++i;
 
 			if (xRingbufferSendAcquire(*rbuf, &ptr, sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
 			{
 					// Si falla la reserva de memoria, notifica la pérdida del dato. Esto ocurre cuando 
 					// una tarea productora es mucho más rápida que la tarea consumidora. Aquí no debe ocurrir.
-					ESP_LOGI(TAG,"Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*rbuf));
 			}
 			else 
 			{

@@ -34,7 +34,9 @@
 #define SYS_NAME "STF P1 System"
 enum{
 	INIT,
-    SENSOR_LOOP
+    NORMAL_MODE,
+	DEGRADED_MODE,
+	ERROR
 };
 
 // Configuración del termistor
@@ -83,6 +85,8 @@ SYSTEM_TASK(TASK_MONITOR);
 typedef struct 
 {
 	RingbufHandle_t* rbuf; // puntero al buffer 
+	system_t* sys_stf_p1;
+	system_task_t* task_monitor;
     // ...
 }task_monitor_args_t;
 // Timeout de la tarea (ver system_task_stop)

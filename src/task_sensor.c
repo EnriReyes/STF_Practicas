@@ -33,7 +33,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <string.h>
-
+#include "therm.h"
 // freertos
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -82,32 +82,32 @@ adc_oneshot_unit_handle_t adc_hdlr;
 // capaz de medir)
 
 // LSB crudo
-int read_adc() 
-{
-    int raw_value = 0;
-    ESP_ERROR_CHECK(adc_oneshot_read(adc_hdlr, THERMISTOR_ADC_CHANNEL, &raw_value));
-    return raw_value;
-}
+// int read_adc() 
+// {
+//     int raw_value = 0;
+//     ESP_ERROR_CHECK(adc_oneshot_read(adc_hdlr, THERMISTOR_ADC_CHANNEL, &raw_value));
+//     return raw_value;
+// }
 
 // LSB -> V
 // 12 bits -> 2^12 = 4096 -> rango de 0 a 4095. 
 // V de referencia interno del ESP32 -> 3.3V
-#define lsb_to_v(x) (float) ((x) * 3.3f / 4095.0f)
+//#define lsb_to_v(x) (float) ((x) * 3.3f / 4095.0f)
 
 // V -> Temperatura en C
-float v_to_temperature(float v)
-{
-	// resistencia del termistor, obtenida por el voltaje medido en el adc. 
-    float r_ntc = SERIES_RESISTANCE * (3.3 - v) / v;
+// float v_to_temperature(float v)
+// {
+// 	// resistencia del termistor, obtenida por el voltaje medido en el adc. 
+//     float r_ntc = SERIES_RESISTANCE * (3.3 - v) / v;
 
-	// Ecuación de Steinhart-Hart, que relaciona la resistencia que ofrece un material semiconductor 
-	// con la variación de la temperatura en Kelvin, de acuerdo a unos coeficientes que caracterizan
-	// al semiconductor en cuestión (están definidos en config.h) 
-	float t_kelvin = 1.0f / (1.0f / NOMINAL_TEMPERATURE + (1.0f / BETA_COEFFICIENT) * log(r_ntc / NOMINAL_RESISTANCE));
+// 	// Ecuación de Steinhart-Hart, que relaciona la resistencia que ofrece un material semiconductor 
+// 	// con la variación de la temperatura en Kelvin, de acuerdo a unos coeficientes que caracterizan
+// 	// al semiconductor en cuestión (están definidos en config.h) 
+// 	float t_kelvin = 1.0f / (1.0f / NOMINAL_TEMPERATURE + (1.0f / BETA_COEFFICIENT) * log(r_ntc / NOMINAL_RESISTANCE));
 
-	// Resultado en grados centígrados
-    return(t_kelvin - 273.15f);  
-}
+// 	// Resultado en grados centígrados
+//     return(t_kelvin - 273.15f);  
+// }
 
 // Tarea SENSOR
 SYSTEM_TASK(TASK_SENSOR)
@@ -128,7 +128,9 @@ SYSTEM_TASK(TASK_SENSOR)
     };
 	// Establecimiento de la configuracón en ADC
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&unit_cfg, &adc_hdlr));
-
+	// Configura el termistor
+	therm_t termistor;
+	ESP_ERROR_CHECK(therm_config(&termistor, adc_hdlr, THERMISTOR_ADC_CHANNEL));
 	// Estructura de datos para configurar el canal de la unidad ADC
     adc_oneshot_chan_cfg_t channel_cfg = {
         .atten = ADC_ATTEN_DB_11, // Rango de 0 a 3.3V
@@ -137,7 +139,7 @@ SYSTEM_TASK(TASK_SENSOR)
 	// Establecimiento de la configuración del canal
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_hdlr, THERMISTOR_ADC_CHANNEL, &channel_cfg));
 
-	// Inicializa el semásforo (la estructura del manejador se definió globalmente)
+	// Inicializa el semáforo (la estructura del manejador se definió globalmente)
 	semSample = xSemaphoreCreateBinary();
 
 	// Crea y establece una estructura de configuración para el temporizador
@@ -164,7 +166,7 @@ SYSTEM_TASK(TASK_SENSOR)
 		if(xSemaphoreTake(semSample, ((1000/frequency)*1.2)/portTICK_PERIOD_MS))
 		{	
 			// lectura del sensor. Se obtiene el valor en grados centígrados
-			v = v_to_temperature(lsb_to_v(read_adc()));
+			v = therm_read_t(termistor);
 			ESP_LOGI(TAG, "valor medido (pre buffer): %f", v);
 
 

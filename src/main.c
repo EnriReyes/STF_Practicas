@@ -97,7 +97,7 @@ void app_main(void)
 			// Lo que hace la tarea está en task_monitor.c
 			ESP_LOGI(TAG, "starting monitor task...");
 			task_sensor_args_t task_monitor_args = {&rbuf};
-			system_task_start_in_core(&sys_stf_p1, &task_sensor, TASK_MONITOR, "TASK_MONITOR", TASK_MONITOR_STACK_SIZE, &task_monitor_args, 0, CORE1);
+			system_task_start_in_core(&sys_stf_p1, &task_monitor, TASK_MONITOR, "TASK_MONITOR", TASK_MONITOR_STACK_SIZE, &task_monitor_args, 0, CORE1);
 			ESP_LOGI(TAG, "Done");
 
 			// Esta macro provoca el cambio de estado a SENSOR_LOOP, en este caso. 

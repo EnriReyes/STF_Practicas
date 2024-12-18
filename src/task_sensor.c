@@ -117,10 +117,8 @@ SYSTEM_TASK(TASK_SENSOR)
 
 	// Recibe los argumentos de configuración de la tarea y los desempaqueta
 	task_sensor_args_t* ptr_args = (task_sensor_args_t*) TASK_ARGS;
-	RingbufHandle_t* rbuf = ptr_args->rbuf;
-	RingbufHandle_t* cbuf = ptr_args->cbuf; 
+	RingbufHandle_t* rbuf = ptr_args->rbuf; 
 	uint8_t frequency = ptr_args->freq;
-	uint8_t n = ptr_args->n;
 	uint64_t period_us = 1000000 / frequency;
 
 	// Estructura de datos para configurar la unidad ADC
@@ -136,6 +134,8 @@ SYSTEM_TASK(TASK_SENSOR)
 	ESP_ERROR_CHECK(therm_config(&termistor, adc_hdlr, THERMISTOR_ADC_CHANNEL, THERMISTOR_ADC_CHANNEL_ON_OFF));
 	therm_t termistor2;
 	ESP_ERROR_CHECK(therm_config(&termistor2, adc_hdlr, THERMISTOR_ADC_CHANNEL2, THERMISTOR2_ADC_CHANNEL_ON_OFF));
+	therm_t termistor3;
+	ESP_ERROR_CHECK(therm_config(&termistor3, adc_hdlr, THERMISTOR_ADC_CHANNEL3, THERMISTOR3_ADC_CHANNEL_ON_OFF));
 
 	// Estructura de datos para configurar el canal de la unidad ADC
     adc_oneshot_chan_cfg_t channel_cfg = {
@@ -145,6 +145,8 @@ SYSTEM_TASK(TASK_SENSOR)
 	// Establecimiento de la configuración del canal
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_hdlr, THERMISTOR_ADC_CHANNEL, &channel_cfg));
 	ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_hdlr, THERMISTOR_ADC_CHANNEL2, &channel_cfg));
+	ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_hdlr, THERMISTOR_ADC_CHANNEL3, &channel_cfg));
+
 
 
 	// Inicializa el semáforo (la estructura del manejador se definió globalmente)
@@ -164,9 +166,11 @@ SYSTEM_TASK(TASK_SENSOR)
 	// variables para reutilizar en el bucle
 	void *ptr;
 	void* ptr2;
-	data_item_t items[2];
+	data_item_t items[3];
 	items[0].source=0;
 	items[1].source=0;
+	items[2].source=0;
+
 
  // Vector para almacenar las dos lecturas
 	int i = 0;
@@ -180,43 +184,32 @@ SYSTEM_TASK(TASK_SENSOR)
 		{	
 			// lectura del sensor. Se obtiene el valor en grados centígrados
 			items[0].value = therm_read_t(termistor);
-			++i;
 
-			if (xRingbufferSendAcquire(*rbuf, &ptr, sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
-			{
-					// Si falla la reserva de memoria, notifica la pérdida del dato. Esto ocurre cuando 
-					// una tarea productora es mucho más rápida que la tarea consumidora. Aquí no debe ocurrir.
-			}
-			else 
-			{
-				memcpy(ptr,&items,sizeof(data_item_t));
-				xRingbufferSendComplete(*rbuf, ptr);
-			}
+
 			
-			if( i%n == 0){
 				items[1].value = therm_read_t(termistor2);
-				ESP_LOGI(TAG, "valor medido (pre buffer 2): %.4f", items[1].value);
+				items[2].value = therm_read_t(termistor3);
 
 				// Uso del buffer cíclico entre la tarea monitor y sensor. Ver documentación en ESP-IDF
 				// Pide al RingBuffer espacio para escribir un float. 
-				if (xRingbufferSendAcquire(*cbuf, &ptr, 2*sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
+				if (xRingbufferSendAcquire(*rbuf, &ptr, 3*sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
 				{
 					// Si falla la reserva de memoria, notifica la pérdida del dato. Esto ocurre cuando 
 					// una tarea productora es mucho más rápida que la tarea consumidora. Aquí no debe ocurrir.
-					ESP_LOGI(TAG,"Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*cbuf));
+					ESP_LOGI(TAG,"Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*rbuf));
 				}
 				else 
 				{
 					// Si xRingbufferSendAcquire tiene éxito, podemos escribir el número de bytes solicitados
 					// en el puntero ptr. El espacio asignado estará bloqueado para su lectura hasta que 
 					// se notifique que se ha completado la escritura
-					memcpy(ptr,items,2*sizeof(data_item_t));
+					memcpy(ptr,items,3*sizeof(data_item_t));
 
 					// Se notifica que la escritura ha completado. 
-					xRingbufferSendComplete(*cbuf, ptr);
+					xRingbufferSendComplete(*rbuf, ptr);
 				}
 
-			}
+		
 			
 
 

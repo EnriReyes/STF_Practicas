@@ -43,10 +43,14 @@ enum{
 
 #define THERMISTOR_ADC_UNIT ADC_UNIT_1
 #define THERMISTOR_ADC_CHANNEL ADC_CHANNEL_6 // GPIO34
-#define THERMISTOR_ADC_CHANNEL2 ADC_CHANNEL_7 // GPIO34
+#define THERMISTOR_ADC_CHANNEL2 ADC_CHANNEL_7 
+#define THERMISTOR_ADC_CHANNEL3 ADC_CHANNEL_4 // GPIO32
+
 
 #define THERMISTOR_ADC_CHANNEL_ON_OFF GPIO_NUM_NC
 #define THERMISTOR2_ADC_CHANNEL_ON_OFF 33
+#define THERMISTOR3_ADC_CHANNEL_ON_OFF GPIO_NUM_NC
+
 
 #define N 2
 
@@ -63,9 +67,7 @@ SYSTEM_TASK(TASK_SENSOR);
 typedef struct 
 {
 	RingbufHandle_t* rbuf; // puntero al buffer 
-	RingbufHandle_t* cbuf;
 	uint8_t freq;          // frecuencia de muestreo
-	uint8_t n; 
     // ...
 }task_sensor_args_t;
 // Timeout de la tarea (ver system_task_stop)
@@ -85,8 +87,6 @@ SYSTEM_TASK(TASK_MONITOR);
 typedef struct 
 {
 	RingbufHandle_t* rbuf; // puntero al buffer 
-	system_t* sys_stf_p1;
-	system_task_t* task_monitor;
     // ...
 }task_monitor_args_t;
 // Timeout de la tarea (ver system_task_stop)
@@ -99,8 +99,7 @@ SYSTEM_TASK(TASK_CHECK);
 // definición de los argumentos que requiere la tarea
 typedef struct 
 {
-	RingbufHandle_t* rbuf;
-	RingbufHandle_t* cbuf; // puntero al buffer 
+	RingbufHandle_t* rbuf; // puntero al buffer 
     // ...
 }task_check_args_t;
 // Timeout de la tarea (ver system_task_stop)

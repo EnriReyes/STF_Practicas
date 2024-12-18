@@ -45,23 +45,17 @@ void app_main(void)
 	system_create(&sys_stf_p1, SYS_NAME);
 	system_register_state(&sys_stf_p1, INIT);
 	system_register_state(&sys_stf_p1, NORMAL_MODE);
-	system_register_state(&sys_stf_p1, DEGRADED_MODE);
-	system_register_state(&sys_stf_p1, ERROR);
 	system_set_default_state(&sys_stf_p1, INIT);
 
 
 	// Define manejadores de tareas (de momento sin asignar)
 	system_task_t task_sensor;
 	system_task_t task_monitor;
-	system_task_t task_check;
 
 	// Define y crea un buffer cíclico (ver documentación de ESP-IDF)
 	// a modo de buffer thread-safe entre tareas. 
 	RingbufHandle_t rbuf;
 	rbuf = xRingbufferCreate(BUFFER_SIZE, BUFFER_TYPE);
-	//Creamos buffer para el Comprobador
-	RingbufHandle_t cbuf;
-	cbuf = xRingbufferCreate(BUFFER_SIZE, BUFFER_TYPE);
 	// variable para códigos de retorno 
 	esp_err_t ret;
 
@@ -91,7 +85,7 @@ void app_main(void)
 			// Crea la tarea sensor como un proceso asociado al CORE 0. 
 			// Lo que hace la tarea está en task_sensor.h
             ESP_LOGI(TAG, "starting sensor task...");
-            task_sensor_args_t task_sensor_args = {&rbuf, &cbuf, 1, N};
+            task_sensor_args_t task_sensor_args = {&rbuf, 1};
 			system_task_start_in_core(&sys_stf_p1, &task_sensor, TASK_SENSOR, "TASK_SENSOR", 
 										TASK_SENSOR_STACK_SIZE, &task_sensor_args, 0, CORE0);
 			ESP_LOGI(TAG, "Done");
@@ -102,16 +96,12 @@ void app_main(void)
 			// Crea la tarea monitor como un proceso asociado al CORE 1.
 			// Lo que hace la tarea está en task_monitor.c
 			ESP_LOGI(TAG, "starting monitor task...");
-			task_monitor_args_t task_monitor_args = {&rbuf, &sys_stf_p1, &task_monitor};
+			task_monitor_args_t task_monitor_args = {&rbuf};
 			system_task_start_in_core(&sys_stf_p1, &task_monitor, TASK_MONITOR, "TASK_MONITOR", 
 											TASK_MONITOR_STACK_SIZE, &task_monitor_args, 0, CORE1);
 			ESP_LOGI(TAG, "Done");
 
-			ESP_LOGI(TAG, "starting check task...");
-			task_check_args_t task_check_args = {&rbuf, &cbuf};
-			system_task_start_in_core(&sys_stf_p1, &task_check, TASK_CHECK, "TASK_CHECK",
-											TASK_CHECK_STACK_SIZE, &task_check_args, 0, CORE1);
-			ESP_LOGI(TAG, "Done");
+			
 
 			// Esta macro provoca el cambio de estado a SENSOR_LOOP, en este caso. 
 			// system.h define una macro para cambiar de estado desde una tarea externa
@@ -126,24 +116,6 @@ void app_main(void)
 			STATE_BEGIN();
 			// La máquina queda en este estado de forma indefinida. 
 			ESP_LOGI(TAG, "State: NORMAL_MODE");
-			STATE_END();
-		}
-
-		STATE(DEGRADED_MODE)
-		{
-			STATE_BEGIN();
-			// La máquina queda en este estado de forma indefinida. 
-			ESP_LOGI(TAG, "State: DEGRADED_MODE");
-			STATE_END();
-		}
-
-		STATE(ERROR)
-		{
-			STATE_BEGIN();
-			// La máquina queda en este estado de forma indefinida. 
-			ESP_LOGI(TAG, "State: ERROR");
-			system_task_stop(&sys_stf_p1, &task_check, TASK_CHECK_TIMEOUT_MS);
-			system_task_stop(&sys_stf_p1, &task_sensor, TASK_SENSOR_TIMEOUT_MS);
 			STATE_END();
 		}
 

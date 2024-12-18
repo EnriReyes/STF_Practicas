@@ -41,15 +41,12 @@ SYSTEM_TASK(TASK_MONITOR)
 	// Recibe los argumentos de configuración de la tarea y los desempaqueta
 	task_monitor_args_t* ptr_args = (task_monitor_args_t*) TASK_ARGS;
 	RingbufHandle_t* rbuf = ptr_args->rbuf; 
-	system_t* sys_stf_p1  = ptr_args->sys_stf_p1;
-	system_task_t* task_monitor = ptr_args->task_monitor;
 
 	// variables para reutilizar en el bucle
 	size_t length;
 	void *ptr;
 	float v;
-	float storage_item = 0;
-	data_item_t* received_item;
+	data_item_t* received_item[3];
 	// Loop
 	TASK_LOOP()
 	{
@@ -58,58 +55,28 @@ SYSTEM_TASK(TASK_MONITOR)
 		// pero si expira vuelve aquí sin consecuencias
 		ptr = xRingbufferReceive(*rbuf, &length, pdMS_TO_TICKS(1000));
 
-		switch(GET_ST_FROM_TASK())
- {
-			case NORMAL_MODE:
+		
 				//Si el timeout expira, este puntero es NULL
-				if (ptr != NULL && length == sizeof(data_item_t)) {
-					received_item = (data_item_t *) ptr;
-					if (received_item->source == 0) {
+				if (ptr != NULL && length == 3*sizeof(data_item_t)) {
+					received_item[0]  = (data_item_t *) ptr;
+					received_item[1]  = (data_item_t *) ptr + 1;
+					received_item[2]  = (data_item_t *) ptr + 2;
+
+					if (received_item[0]->source == 0) {
 						// Origen TASK_SENSOR
-						ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item->value);
-						
-					} else if (received_item->source == 1) {
-						// Origen TASK_CHECK	
-						storage_item = received_item->value;
+						ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[0]->value);
+						ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[1]->value);
+						ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[2]->value);
+				
 					}
 					vRingbufferReturnItem(*rbuf, ptr);
 				}else 
 				{
 					ESP_LOGW(TAG, "Esperando datos ...");
 				}
-			break;
+			
 
-			case DEGRADED_MODE:
-				if (ptr != NULL && length == sizeof(data_item_t)) {
-					received_item = (data_item_t *) ptr;
-					if (received_item->source == 0) {
-						// Origen TASK_SENSOR
-						float res1 = (received_item->value-(storage_item/100)*received_item->value);
-						float res2 = (received_item->value+(storage_item/100)*received_item->value);
-						ESP_LOGI(TAG, "DEGRADED_MODE:T = (%.4f - %.4f) ºC", res1, res2);
-						
-					} else if (received_item->source == 1) {
-						// Origen TASK_CHECK	
-						storage_item = received_item->value;
-					}
-					vRingbufferReturnItem(*rbuf, ptr);
-				}else 
-				{
-					ESP_LOGW(TAG, "Esperando datos ...");
-				}
-			break;
-
-			case ERROR:
-					ESP_LOGI(TAG, "Sensor ERROR. Repare and restart.");
-					system_task_stop(sys_stf_p1, task_monitor, TASK_SENSOR_TIMEOUT_MS);
-			break;
-			default:
-				vTaskDelay(100);
-				// esta condición puede ocurrir al entrar
-				// la primera vez desde el estado INIT,
-				// ya que antes de transitar a NORMAL_MODE
-				// se crea la tarea Monitor
- 		}
+			
 
 		
 	}

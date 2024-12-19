@@ -183,14 +183,14 @@ SYSTEM_TASK(TASK_SENSOR)
 		if(xSemaphoreTake(semSample, ((1000/frequency)*1.2)/portTICK_PERIOD_MS))
 		{	
 			// lectura del sensor. Se obtiene el valor en grados centígrados
-			items[0].value = therm_read_t(termistor);
+			items[0].value = therm_read_lsb(termistor);
 
 
 			
-				items[1].value = therm_read_t(termistor2);
-				items[2].value = therm_read_t(termistor3);
+				items[1].value = therm_read_lsb(termistor2);
+				items[2].value = therm_read_lsb(termistor3);
 
-				ESP_LOGI(TAG,"T1:%.4f, T2:%.4f, T3:%.4f", items[0].value, items[1].value, items[2].value);
+				ESP_LOGI(TAG,"T1:%.4f, T2:%.4f, T3:%.4f", _therm_v2t(_therm_lsb2v(items[0].value)),_therm_v2t( _therm_lsb2v(items[1].value)), _therm_v2t(_therm_lsb2v(items[2].value)));
 				// Uso del buffer cíclico entre la tarea monitor y sensor. Ver documentación en ESP-IDF
 				// Pide al RingBuffer espacio para escribir un float. 
 				if (xRingbufferSendAcquire(*vbuf, &ptr, 3*sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)

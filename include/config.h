@@ -28,6 +28,7 @@
 #define CORE0 0
 #define CORE1 1
 
+#define MASCARA ((uint16_t)0xFFFC)
 // Configuraciones y constantes
 
 // Nombre y estados de la máquina
@@ -78,7 +79,7 @@ typedef struct
 //Valores que se pasan al buffer
 typedef struct {
     uint8_t source;  // 0 = TASK_SENSOR, 1 = TASK_CHECK
-    float value;
+    uint16_t value;
 } data_item_t;
 
 // MONITOR
@@ -101,6 +102,7 @@ typedef struct
 {
 	RingbufHandle_t* rbuf; // puntero al buffer 
 	RingbufHandle_t* vbuf; // puntero al buffer 
+	uint16_t mascara;
     // ...
 }task_votador_args_t;
 // Timeout de la tarea (ver system_task_stop)

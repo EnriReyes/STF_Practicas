@@ -112,7 +112,7 @@ void app_main(void)
             ESP_LOGI(TAG, "Done");
 
             ESP_LOGI(TAG, "starting votador task...");
-            task_votador_args_t task_votador_args = {&rbuf, &vbuf};
+            task_votador_args_t task_votador_args = {&rbuf, &vbuf, MASCARA};
             system_task_start_in_core(&sys_stf_p1, &task_votador, TASK_VOTADOR, "TASK_VOTADOR", 
                                         TASK_SENSOR_STACK_SIZE, &task_votador_args, 0, CORE1);
             ESP_LOGI(TAG, "Done");

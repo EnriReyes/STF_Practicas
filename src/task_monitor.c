@@ -28,7 +28,7 @@
 
 // propias
 #include "config.h"
-
+#include "therm.h"
 static const char *TAG = "STF_P1:task_monitor";
 
 
@@ -65,9 +65,9 @@ SYSTEM_TASK(TASK_MONITOR)
 
 					if (received_item[0]->source == 0) {
 						// Origen TASK_SENSOR
-						ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[0]->value);
-						ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[1]->value);
-						ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[2]->value);
+						// ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[0]->value);
+						// ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[1]->value);
+						// ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[2]->value);
 				
 					}
 					
@@ -75,10 +75,10 @@ SYSTEM_TASK(TASK_MONITOR)
 				}else if (ptr != NULL && length == sizeof(data_item_t)){
 
 					media = (data_item_t *) ptr;
-					
+					float res = _therm_v2t(_therm_lsb2v(media->value));
 
 					if (media->source == 2) {
-						ESP_LOGI(TAG, "NORMAL_MODE:Media = {%.4f} ºC", media->value);
+						ESP_LOGI(TAG, "NORMAL_MODE:Media = {%.4f} ºC", res);
 					}
 					vRingbufferReturnItem(*rbuf, ptr);
 				}

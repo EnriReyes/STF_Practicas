@@ -29,6 +29,7 @@ SYSTEM_TASK(TASK_VOTADOR)
     task_votador_args_t* ptr_args = (task_votador_args_t*) TASK_ARGS;
     RingbufHandle_t* rbuf = ptr_args->rbuf; 
     RingbufHandle_t* vbuf = ptr_args->vbuf; 
+	uint16_t mascara = ptr_args->mascara;
 
     // Variables para reutilizar en el bucle
     size_t length;
@@ -57,8 +58,8 @@ SYSTEM_TASK(TASK_VOTADOR)
 
                 // Procesa los datos si el origen es correcto
                 if (received_item[0].source == 0) {
-                    media.value = (received_item[0].value + received_item[1].value + received_item[2].value) / 3;
-
+                    media.value = (received_item[0].value & received_item[1].value) | (received_item[0].value & received_item[2].value) | (received_item[1].value & received_item[2].value);
+					media.value  = media.value & mascara;
                     // Intenta adquirir espacio en el RingBuffer de salida
                     if (xRingbufferSendAcquire(*rbuf, &ptr2, sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE) {
                         ESP_LOGI(TAG, "Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*rbuf));

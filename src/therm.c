@@ -51,6 +51,10 @@ float therm_read_t(therm_t thermistor) {
 
 float _therm_v2t(float v) {
     float r_ntc = SERIES_RESISTANCE * (3.3 - v) / v;
+    if(r_ntc <0){
+         r_ntc *= -1;
+    }
+   
     float t_kelvin = 1.0f / (1.0f / NOMINAL_TEMPERATURE + log(r_ntc / NOMINAL_RESISTANCE) / BETA_COEFFICIENT);
     return t_kelvin - 273.15f;
 }

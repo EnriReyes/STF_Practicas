@@ -66,7 +66,7 @@ SYSTEM_TASK(TASK_SENSOR);
 // definición de los argumentos que requiere la tarea
 typedef struct 
 {
-	RingbufHandle_t* rbuf; // puntero al buffer 
+	RingbufHandle_t* vbuf; // puntero al buffer 
 	uint8_t freq;          // frecuencia de muestreo
     // ...
 }task_sensor_args_t;
@@ -95,13 +95,14 @@ typedef struct
 #define TASK_MONITOR_STACK_SIZE 4096
 
 // MONITOR
-SYSTEM_TASK(TASK_CHECK);
+SYSTEM_TASK(TASK_VOTADOR);
 // definición de los argumentos que requiere la tarea
 typedef struct 
 {
 	RingbufHandle_t* rbuf; // puntero al buffer 
+	RingbufHandle_t* vbuf; // puntero al buffer 
     // ...
-}task_check_args_t;
+}task_votador_args_t;
 // Timeout de la tarea (ver system_task_stop)
 #define TASK_CHECK_TIMEOUT_MS 2000 
 // Tamaño de la pila de la tarea

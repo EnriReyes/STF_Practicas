@@ -47,6 +47,7 @@ SYSTEM_TASK(TASK_MONITOR)
 	void *ptr;
 	float v;
 	data_item_t* received_item[3];
+	data_item_t* media;
 	// Loop
 	TASK_LOOP()
 	{
@@ -69,9 +70,19 @@ SYSTEM_TASK(TASK_MONITOR)
 						ESP_LOGI(TAG, "NORMAL_MODE:T = {%.4f} ºC", received_item[2]->value);
 				
 					}
+					
 					vRingbufferReturnItem(*rbuf, ptr);
-				}else 
-				{
+				}else if (ptr != NULL && length == sizeof(data_item_t)){
+
+					media = (data_item_t *) ptr;
+					
+
+					if (media->source == 2) {
+						ESP_LOGI(TAG, "NORMAL_MODE:Media = {%.4f} ºC", media->value);
+					}
+					vRingbufferReturnItem(*rbuf, ptr);
+				}
+				else{
 					ESP_LOGW(TAG, "Esperando datos ...");
 				}
 			

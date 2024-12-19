@@ -117,7 +117,7 @@ SYSTEM_TASK(TASK_SENSOR)
 
 	// Recibe los argumentos de configuración de la tarea y los desempaqueta
 	task_sensor_args_t* ptr_args = (task_sensor_args_t*) TASK_ARGS;
-	RingbufHandle_t* rbuf = ptr_args->rbuf; 
+	RingbufHandle_t* vbuf = ptr_args->vbuf; 
 	uint8_t frequency = ptr_args->freq;
 	uint64_t period_us = 1000000 / frequency;
 
@@ -190,13 +190,14 @@ SYSTEM_TASK(TASK_SENSOR)
 				items[1].value = therm_read_t(termistor2);
 				items[2].value = therm_read_t(termistor3);
 
+				ESP_LOGI(TAG,"T1:%.4f, T2:%.4f, T3:%.4f", items[0].value, items[1].value, items[2].value);
 				// Uso del buffer cíclico entre la tarea monitor y sensor. Ver documentación en ESP-IDF
 				// Pide al RingBuffer espacio para escribir un float. 
-				if (xRingbufferSendAcquire(*rbuf, &ptr, 3*sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
+				if (xRingbufferSendAcquire(*vbuf, &ptr, 3*sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
 				{
 					// Si falla la reserva de memoria, notifica la pérdida del dato. Esto ocurre cuando 
 					// una tarea productora es mucho más rápida que la tarea consumidora. Aquí no debe ocurrir.
-					ESP_LOGI(TAG,"Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*rbuf));
+					ESP_LOGI(TAG,"Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*vbuf));
 				}
 				else 
 				{
@@ -206,7 +207,7 @@ SYSTEM_TASK(TASK_SENSOR)
 					memcpy(ptr,items,3*sizeof(data_item_t));
 
 					// Se notifica que la escritura ha completado. 
-					xRingbufferSendComplete(*rbuf, ptr);
+					xRingbufferSendComplete(*vbuf, ptr);
 				}
 
 		

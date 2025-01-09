@@ -41,6 +41,8 @@ SYSTEM_TASK(TASK_MONITOR)
 	// Recibe los argumentos de configuración de la tarea y los desempaqueta
 	task_monitor_args_t* ptr_args = (task_monitor_args_t*) TASK_ARGS;
 	RingbufHandle_t* rbuf = ptr_args->rbuf; 
+	system_t* sys_stf_p1  = ptr_args->c;
+	system_task_t* task_monitor = ptr_args->task_monitor;
 
 	// variables para reutilizar en el bucle
 	size_t length;
@@ -78,7 +80,19 @@ SYSTEM_TASK(TASK_MONITOR)
 					float res = _therm_v2t(_therm_lsb2v(media->value));
 
 					if (media->source == 2) {
-						ESP_LOGI(TAG, "NORMAL_MODE:Media = {%.4f} ºC", res);
+						switch(GET_ST_FROM_TASK())
+						{
+							case NORMAL_MODE:
+								ESP_LOGI(TAG, "NORMAL_MODE:Media = {%.4f} ºC", res);
+							break;
+							case DEGRADED_MODE:
+								ESP_LOGI(TAG, "DEGRADED_MODE:Media = {%.4f} ºC", res);
+							break;
+							case ERROR: 
+								ESP_LOGI(TAG, "Demasiadas diferencias entre los termistores. Repare and restart.");
+								system_task_stop(sys_stf_p1, task_monitor, TASK_SENSOR_TIMEOUT_MS);
+							break;
+						}
 					}
 					vRingbufferReturnItem(*rbuf, ptr);
 				}

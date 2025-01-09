@@ -34,7 +34,7 @@
 // Nombre y estados de la máquina
 #define SYS_NAME "STF P1 System"
 enum{
-	INIT,
+	INIT,	
     NORMAL_MODE,
 	DEGRADED_MODE,
 	ERROR
@@ -67,8 +67,10 @@ SYSTEM_TASK(TASK_SENSOR);
 // definición de los argumentos que requiere la tarea
 typedef struct 
 {
-	RingbufHandle_t* vbuf; // puntero al buffer 
+	RingbufHandle_t* vbuf; // puntero al buffer del monitor
+	RingbufHandle_t* abuf; //puntero al buffer del votador
 	uint8_t freq;          // frecuencia de muestreo
+	uint8_t periodo;
     // ...
 }task_sensor_args_t;
 // Timeout de la tarea (ver system_task_stop)
@@ -88,6 +90,8 @@ SYSTEM_TASK(TASK_MONITOR);
 typedef struct 
 {
 	RingbufHandle_t* rbuf; // puntero al buffer 
+	system_t* c;
+	system_task_t* task_monitor;	
     // ...
 }task_monitor_args_t;
 // Timeout de la tarea (ver system_task_stop)
@@ -95,19 +99,31 @@ typedef struct
 // Tamaño de la pila de la tarea
 #define TASK_MONITOR_STACK_SIZE 4096
 
-// MONITOR
 SYSTEM_TASK(TASK_VOTADOR);
 // definición de los argumentos que requiere la tarea
 typedef struct 
 {
-	RingbufHandle_t* rbuf; // puntero al buffer 
-	RingbufHandle_t* vbuf; // puntero al buffer 
+	RingbufHandle_t* rbuf; // puntero al buffer del monitor
+	RingbufHandle_t* vbuf; // puntero al buffer dek votador
 	uint16_t mascara;
     // ...
 }task_votador_args_t;
 // Timeout de la tarea (ver system_task_stop)
-#define TASK_CHECK_TIMEOUT_MS 2000 
+#define TASK_VOTADOR_TIMEOUT_MS 2000 
 // Tamaño de la pila de la tarea
-#define TASK_CHECK_STACK_SIZE 4096
+#define TASK_VOTADOR_STACK_SIZE 4096
 
+SYSTEM_TASK(TASK_ALERTA);
+// definición de los argumentos que requiere la tarea
+typedef struct 
+{
+	RingbufHandle_t* vbuf; // puntero al buffer del monitor
+	RingbufHandle_t* abuf; // puntero al buffer dek votador
+	uint16_t mascara;
+    // ...
+}task_alerta_args_t;
+// Timeout de la tarea (ver system_task_stop)
+#define TASK_ALERTA_TIMEOUT_MS 2000 
+// Tamaño de la pila de la tarea
+#define TASK_ALERTA_STACK_SIZE 4096
 #endif

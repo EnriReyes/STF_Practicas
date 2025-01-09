@@ -118,6 +118,8 @@ SYSTEM_TASK(TASK_SENSOR)
 	// Recibe los argumentos de configuración de la tarea y los desempaqueta
 	task_sensor_args_t* ptr_args = (task_sensor_args_t*) TASK_ARGS;
 	RingbufHandle_t* vbuf = ptr_args->vbuf; 
+	RingbufHandle_t* abuf = ptr_args->abuf; 
+	uint8_t periodo = ptr_args->periodo;
 	uint8_t frequency = ptr_args->freq;
 	uint64_t period_us = 1000000 / frequency;
 
@@ -167,9 +169,7 @@ SYSTEM_TASK(TASK_SENSOR)
 	void *ptr;
 	void* ptr2;
 	data_item_t items[3];
-	items[0].source=0;
-	items[1].source=0;
-	items[2].source=0;
+	
 
 
  // Vector para almacenar las dos lecturas
@@ -182,22 +182,24 @@ SYSTEM_TASK(TASK_SENSOR)
 		// en tareas periódicas cuyo periodo es conocido. 
 		if(xSemaphoreTake(semSample, ((1000/frequency)*1.2)/portTICK_PERIOD_MS))
 		{	
+			++i;
 			// lectura del sensor. Se obtiene el valor en grados centígrados
 			items[0].value = therm_read_lsb(termistor);
-
+			items[0].source = 1;
 
 			
 				items[1].value = therm_read_lsb(termistor2);
+				items[1].source = 2;
 				items[2].value = therm_read_lsb(termistor3);
+				items[2].source = 3;
 
-				ESP_LOGI(TAG,"T1:%.4f, T2:%.4f, T3:%.4f", _therm_v2t(_therm_lsb2v(items[0].value)),_therm_v2t( _therm_lsb2v(items[1].value)), _therm_v2t(_therm_lsb2v(items[2].value)));
 				// Uso del buffer cíclico entre la tarea monitor y sensor. Ver documentación en ESP-IDF
 				// Pide al RingBuffer espacio para escribir un float. 
 				if (xRingbufferSendAcquire(*vbuf, &ptr, 3*sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
 				{
 					// Si falla la reserva de memoria, notifica la pérdida del dato. Esto ocurre cuando 
 					// una tarea productora es mucho más rápida que la tarea consumidora. Aquí no debe ocurrir.
-					ESP_LOGI(TAG,"Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*vbuf));
+					ESP_LOGI(TAG,"Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*abuf));
 				}
 				else 
 				{
@@ -210,10 +212,27 @@ SYSTEM_TASK(TASK_SENSOR)
 					xRingbufferSendComplete(*vbuf, ptr);
 				}
 
-		
+			if(i % periodo){
+
+				if (xRingbufferSendAcquire(*abuf, &ptr, 3*sizeof(data_item_t), pdMS_TO_TICKS(100)) != pdTRUE)
+				{
+					// Si falla la reserva de memoria, notifica la pérdida del dato. Esto ocurre cuando 
+					// una tarea productora es mucho más rápida que la tarea consumidora. Aquí no debe ocurrir.
+					ESP_LOGI(TAG,"Buffer lleno. Espacio disponible: %d", xRingbufferGetCurFreeSize(*abuf));
+				}
+				else 
+				{
+					// Si xRingbufferSendAcquire tiene éxito, podemos escribir el número de bytes solicitados
+					// en el puntero ptr. El espacio asignado estará bloqueado para su lectura hasta que 
+					// se notifique que se ha completado la escritura
+					memcpy(ptr,items,3*sizeof(data_item_t));
+
+					// Se notifica que la escritura ha completado. 
+					xRingbufferSendComplete(*abuf, ptr);
+				}
+
+			}
 			
-
-
 			
 		}
 		else
